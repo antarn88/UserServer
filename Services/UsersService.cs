@@ -5,42 +5,37 @@ using System.Linq.Dynamic.Core;
 
 namespace UserServer.Services
 {
-    public class UsersService
+    public class UsersService(ApplicationDbContext context)
     {
-        private readonly ApplicationDbContext _context;
-
-        public UsersService(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        private readonly ApplicationDbContext _context = context;
 
         /// <summary>
         /// Get paginated and sorted list of users.
         /// </summary>
         public Models.PagedResult<UserDto> GetUsers(int page = 1, int perPage = 10, string sort = "name")
         {
-            var query = _context.Users.AsQueryable();
+            IQueryable<User> query = _context.Users.AsQueryable();
 
             // Dynamic sorting
             if (!string.IsNullOrEmpty(sort))
             {
-                bool isDescending = sort.StartsWith("-");
+                bool isDescending = sort.StartsWith('-');
                 string sortProperty = isDescending ? sort.Substring(1) : sort;
                 string orderByStr = $"{sortProperty} {(isDescending ? "descending" : "ascending")}";
                 query = query.OrderBy(orderByStr);
             }
 
             int skip = (page - 1) * perPage;
-            var pagedUsers = query.Skip(skip).Take(perPage).ToList();
+            List<User> pagedUsers = [.. query.Skip(skip).Take(perPage)];
 
             int totalItems = query.Count();
             int totalPages = (int)Math.Ceiling((double)totalItems / perPage);
 
-            var result = new Models.PagedResult<UserDto>
+            Models.PagedResult<UserDto> result = new()
             {
                 First = 1,
-                Prev = page > 1 ? page - 1 : (int?)null,
-                Next = page < totalPages ? page + 1 : (int?)null,
+                Prev = page > 1 ? page - 1 : null,
+                Next = page < totalPages ? page + 1 : null,
                 Last = totalPages,
                 Pages = totalPages,
                 Items = totalItems,
@@ -76,7 +71,6 @@ namespace UserServer.Services
                     };
                 }
             }
-
             return null;
         }
 
@@ -87,9 +81,7 @@ namespace UserServer.Services
         {
             User? user = _context.Users.SingleOrDefault(u => u.Email == email);
 
-            if (user == null) return null;
-
-            return new UserDto
+            return user == null ? null : new UserDto
             {
                 Id = user.Id,
                 Name = user.Name,
@@ -112,7 +104,7 @@ namespace UserServer.Services
             // Hash the password
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            User user = new User
+            User user = new()
             {
                 Id = Guid.NewGuid(),
                 Name = request.Name,

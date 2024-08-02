@@ -3,18 +3,8 @@ using UserServer.Models;
 
 namespace UserServer.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
     {
-        public ApplicationDbContext()
-        {
-
-        }
-
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options): base(options)
-        {
-
-        }
-
         public DbSet<User> Users { get; set; } // A User modell DbSet-je
     }
 }

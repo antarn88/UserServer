@@ -9,14 +9,9 @@ namespace UserServer.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class UsersController : ControllerBase
+    public class UsersController(UsersService usersService) : ControllerBase
     {
-        private readonly UsersService _usersService;
-
-        public UsersController(UsersService usersService)
-        {
-            _usersService = usersService;
-        }
+        private readonly UsersService _usersService = usersService;
 
         /// <summary>
         /// Get paginated and sorted list of users or get a user by email.
@@ -28,29 +23,17 @@ namespace UserServer.Controllers
             [FromQuery] string _sort = "name",
             [FromQuery] string? email = null)
         {
-            if (_per_page <= 0)
-            {
-                _per_page = 10;
-            }
-
-            if (_page <= 0)
-            {
-                _page = 1;
-            }
+            _per_page = _per_page <= 0 ? 10 : _per_page;
+            _page = _page <= 0 ? 1 : _page;
 
             if (!string.IsNullOrEmpty(email))
             {
                 UserDto? user = _usersService.GetUserByEmail(email);
 
-                if (user == null)
-                {
-                    return NotFound("Not Found");
-                }
-
-                return Ok(user);
+                return user == null ? NotFound("Not Found") : Ok(user);
             }
 
-            var users = _usersService.GetUsers(_page, _per_page, _sort);
+            Models.PagedResult<UserDto>? users = _usersService.GetUsers(_page, _per_page, _sort);
 
             return Ok(users);
         }
@@ -63,12 +46,7 @@ namespace UserServer.Controllers
         {
             UserDto? user = _usersService.GetUserById(id);
 
-            if (user == null)
-            {
-                return NotFound("Not Found");
-            }
-
-            return Ok(user);
+            return user == null ? NotFound("Not Found") : Ok(user);
         }
 
         /// <summary>
@@ -86,7 +64,7 @@ namespace UserServer.Controllers
             {
                 User? user = _usersService.CreateUser(request);
 
-                var userDto = new UserDto
+                UserDto userDto = new()
                 {
                     Id = user.Id,
                     Name = user.Name,
@@ -122,7 +100,7 @@ namespace UserServer.Controllers
                     return NotFound("Not Found");
                 }
 
-                var userDto = new UserDto
+                UserDto userDto = new()
                 {
                     Id = user.Id,
                     Name = user.Name,
@@ -146,12 +124,7 @@ namespace UserServer.Controllers
         {
             bool success = _usersService.DeleteUser(id);
 
-            if (!success)
-            {
-                return NotFound("Not Found");
-            }
-
-            return NoContent();
+            return success ? NoContent() : NotFound("Not Found");
         }
     }
 }

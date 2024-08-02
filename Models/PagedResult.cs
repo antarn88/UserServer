@@ -8,6 +8,6 @@
         public int Last { get; set; }
         public int Pages { get; set; }
         public int Items { get; set; }
-        public List<T> Data { get; set; } = new List<T>();
+        public List<T> Data { get; set; } = [];
     }
 }

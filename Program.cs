@@ -41,7 +41,7 @@ namespace UserServer
             {
                 options.AddPolicy("AllowSpecificOrigins", policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000") // Cseréld le a valódi domainre
+                    policy.WithOrigins("http://localhost:3000", "https://user-server-ejc2gtb6hqb4dtbh.polandcentral-01.azurewebsites.net", "https://antarn88.github.io")
                           .AllowAnyMethod()
                           .AllowAnyHeader();
                 });
@@ -69,11 +69,8 @@ namespace UserServer
             WebApplication? app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             // CORS alkalmazása
             app.UseCors("AllowSpecificOrigins");
@@ -86,6 +83,13 @@ namespace UserServer
             app.UseAuthorization();
 
             app.MapControllers();
+
+            // Redirect root to Swagger UI
+            app.MapGet("/", (HttpContext httpContext) =>
+            {
+                httpContext.Response.Redirect("/swagger/index.html");
+                return Task.CompletedTask;
+            });
 
             app.Run();
         }

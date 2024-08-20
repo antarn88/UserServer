@@ -6,9 +6,14 @@ namespace UserServer.Controllers
 {
     [ApiController]
     [Route("api")]
-    public class AuthController(AuthService authService) : ControllerBase
+    public class AuthController : ControllerBase
     {
-        private readonly AuthService _authService = authService;
+        private readonly AuthService _authService;
+
+        public AuthController(AuthService authService)
+        {
+            _authService = authService;
+        }
 
         [HttpPost("login")]
         public ActionResult<AuthResponse> Login([FromBody] LoginRequest loginRequest)
@@ -17,7 +22,7 @@ namespace UserServer.Controllers
 
             try
             {
-                AuthResponse? response = _authService.Login(loginRequest.Email, loginRequest.Password);
+                var response = _authService.Login(loginRequest.Email, loginRequest.Password);
 
                 return Ok(response);
             }

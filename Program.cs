@@ -1,7 +1,7 @@
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using UserServer.Data;
 using UserServer.Services;
@@ -12,15 +12,14 @@ namespace UserServer
     {
         public static void Main(string[] args)
         {
-            WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
+            var builder = WebApplication.CreateBuilder(args);
 
             // Ellenõrizzük a JWT beállítások meglétét
-            string? jwtKey = builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is missing in configuration.");
-            string? jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing in configuration.");
-            string? jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new ArgumentNullException("Jwt:Audience is missing in configuration.");
+            var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is missing in configuration.");
+            var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing in configuration.");
+            var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new ArgumentNullException("Jwt:Audience is missing in configuration.");
 
             // Add services to the container.
-
             builder.Services.AddControllers();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -30,10 +29,8 @@ namespace UserServer
             // Az adatbázis kontextus hozzáadása
             builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // Regisztráljuk a UsersService-t
+            // Service-ek hozzáadása a projekthez
             builder.Services.AddScoped<UsersService>();
-
-            // Regisztráljuk az AuthService-t
             builder.Services.AddScoped<AuthService>();
 
             // CORS konfigurálása
@@ -66,7 +63,37 @@ namespace UserServer
                 };
             });
 
-            WebApplication? app = builder.Build();
+            // Swagger authentikációhoz
+            builder.Services.AddSwaggerGen(c =>
+            {
+                // JWT beállítások
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Just enter the token below.",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = JwtBearerDefaults.AuthenticationScheme,
+                    BearerFormat = "JWT",
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
+            });
+
+            var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             app.UseSwagger();
@@ -88,6 +115,7 @@ namespace UserServer
             app.MapGet("/", (HttpContext httpContext) =>
             {
                 httpContext.Response.Redirect("/swagger/index.html");
+
                 return Task.CompletedTask;
             });
 

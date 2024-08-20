@@ -1,20 +1,25 @@
-﻿using UserServer.Data;
+﻿using System.Linq.Dynamic.Core;
+using UserServer.Data;
 using UserServer.DTOs;
 using UserServer.Models;
-using System.Linq.Dynamic.Core;
 
 namespace UserServer.Services
 {
-    public class UsersService(ApplicationDbContext context)
+    public class UsersService
     {
-        private readonly ApplicationDbContext _context = context;
+        private readonly ApplicationDbContext _context;
+
+        public UsersService(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
         /// <summary>
         /// Get paginated and sorted list of users.
         /// </summary>
         public Models.PagedResult<UserDto> GetUsers(int page = 1, int perPage = 10, string sort = "name")
         {
-            IQueryable<User> query = _context.Users.AsQueryable();
+            var query = _context.Users.AsQueryable();
 
             // Dynamic sorting
             if (!string.IsNullOrEmpty(sort))
@@ -26,12 +31,11 @@ namespace UserServer.Services
             }
 
             int skip = (page - 1) * perPage;
-            List<User> pagedUsers = [.. query.Skip(skip).Take(perPage)];
-
+            var pagedUsers = query.Skip(skip).Take(perPage).ToList();
             int totalItems = query.Count();
             int totalPages = (int)Math.Ceiling((double)totalItems / perPage);
 
-            Models.PagedResult<UserDto> result = new()
+            var result = new Models.PagedResult<UserDto>()
             {
                 First = 1,
                 Prev = page > 1 ? page - 1 : null,
@@ -58,19 +62,18 @@ namespace UserServer.Services
         {
             if (Guid.TryParse(id, out Guid guidId))
             {
-                User? user = _context.Users.FirstOrDefault(u => u.Id == guidId);
+                var user = _context.Users.FirstOrDefault(u => u.Id == guidId);
+                if (user == null) return null;
 
-                if (user != null)
+                return new UserDto
                 {
-                    return new UserDto
-                    {
-                        Id = user.Id,
-                        Name = user.Name,
-                        Email = user.Email,
-                        Age = user.Age
-                    };
-                }
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Age = user.Age
+                };
             }
+
             return null;
         }
 
@@ -79,7 +82,7 @@ namespace UserServer.Services
         /// </summary>
         public UserDto? GetUserByEmail(string email)
         {
-            User? user = _context.Users.SingleOrDefault(u => u.Email == email);
+            var user = _context.Users.SingleOrDefault(u => u.Email == email);
 
             return user == null ? null : new UserDto
             {
@@ -102,9 +105,9 @@ namespace UserServer.Services
             }
 
             // Hash the password
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            User user = new()
+            var user = new User()
             {
                 Id = Guid.NewGuid(),
                 Name = request.Name,
@@ -126,15 +129,11 @@ namespace UserServer.Services
         {
             if (!Guid.TryParse(id, out var guidId)) return null;
 
-            User? user = _context.Users.SingleOrDefault(u => u.Id == guidId);
-
+            var user = _context.Users.SingleOrDefault(u => u.Id == guidId);
             if (user == null) return null;
 
             // Check if email already exists for another user
-            if (_context.Users.Any(u => u.Email == request.Email && u.Id != guidId))
-            {
-                throw new InvalidOperationException("Email already exists.");
-            }
+            if (_context.Users.Any(u => u.Email == request.Email && u.Id != guidId)) throw new InvalidOperationException("Email already exists.");
 
             user.Name = request.Name;
             user.Email = request.Email;
@@ -154,8 +153,7 @@ namespace UserServer.Services
         {
             if (!Guid.TryParse(id, out var guidId)) return false;
 
-            User? user = _context.Users.SingleOrDefault(u => u.Id == guidId);
-
+            var user = _context.Users.SingleOrDefault(u => u.Id == guidId);
             if (user == null) return false;
 
             _context.Users.Remove(user);

@@ -8,21 +8,23 @@ using UserServer.Models;
 
 namespace UserServer.Services
 {
-    public class AuthService(ApplicationDbContext context, IConfiguration configuration)
+    public class AuthService
     {
-        private readonly ApplicationDbContext _context = context;
-        private readonly IConfiguration _configuration = configuration;
+        private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+
+        public AuthService(ApplicationDbContext context, IConfiguration configuration)
+        {
+            _context = context;
+            _configuration = configuration;
+        }
 
         public AuthResponse Login(string email, string password)
         {
-            User? user = _context.Users.SingleOrDefault(u => u.Email == email);
+            var user = _context.Users.SingleOrDefault(u => u.Email == email);
+            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password)) throw new UnauthorizedAccessException("Invalid email or password.");
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))
-            {
-                throw new UnauthorizedAccessException("Invalid email or password.");
-            }
-
-            string? token = GenerateJwtToken(user);
+            var token = GenerateJwtToken(user);
 
             return new AuthResponse
             {
@@ -39,17 +41,17 @@ namespace UserServer.Services
 
         private string GenerateJwtToken(User user)
         {
-            string? jwtKey = _configuration["Jwt:Key"];
-            string? jwtIssuer = _configuration["Jwt:Issuer"];
-            string? jwtAudience = _configuration["Jwt:Audience"];
+            var jwtKey = _configuration["Jwt:Key"];
+            var jwtIssuer = _configuration["Jwt:Issuer"];
+            var jwtAudience = _configuration["Jwt:Audience"];
 
             if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience))
             {
                 throw new InvalidOperationException("JWT configuration is missing.");
             }
 
-            SymmetricSecurityKey? securityKey = new(Encoding.UTF8.GetBytes(jwtKey));
-            SigningCredentials? credentials = new(securityKey, SecurityAlgorithms.HmacSha256);
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             Claim[]? claims =
             [
@@ -57,7 +59,7 @@ namespace UserServer.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             ];
 
-            JwtSecurityToken? token = new(
+            var token = new JwtSecurityToken(
                 issuer: jwtIssuer,
                 audience: jwtAudience,
                 claims: claims,

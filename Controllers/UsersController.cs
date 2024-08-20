@@ -1,20 +1,24 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OfficeOpenXml;
 using System.Globalization;
 using UserServer.DTOs;
 using UserServer.Models;
 using UserServer.Services;
-using OfficeOpenXml;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace UserServer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class UsersController(UsersService usersService) : ControllerBase
+    public class UsersController : ControllerBase
     {
-        private readonly UsersService _usersService = usersService;
+        private readonly UsersService _usersService;
+
+        public UsersController(UsersService usersService)
+        {
+            _usersService = usersService;
+        }
 
         /// <summary>
         /// Get paginated and sorted list of users or get a user by email.
@@ -31,12 +35,12 @@ namespace UserServer.Controllers
 
             if (!string.IsNullOrEmpty(email))
             {
-                UserDto? user = _usersService.GetUserByEmail(email);
+                var user = _usersService.GetUserByEmail(email);
 
                 return user == null ? NotFound("Not Found") : Ok(user);
             }
 
-            Models.PagedResult<UserDto>? users = _usersService.GetUsers(_page, _per_page, _sort);
+            var users = _usersService.GetUsers(_page, _per_page, _sort);
 
             return Ok(users);
         }
@@ -47,7 +51,7 @@ namespace UserServer.Controllers
         [HttpGet("{id}")]
         public ActionResult<UserDto> GetUserById(string id)
         {
-            UserDto? user = _usersService.GetUserById(id);
+            var user = _usersService.GetUserById(id);
 
             return user == null ? NotFound("Not Found") : Ok(user);
         }
@@ -58,16 +62,12 @@ namespace UserServer.Controllers
         [HttpPost]
         public ActionResult<UserDto> CreateUser([FromBody] CreateUserRequest request)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
-                User? user = _usersService.CreateUser(request);
-
-                UserDto userDto = new()
+                var user = _usersService.CreateUser(request);
+                var userDto = new UserDto()
                 {
                     Id = user.Id,
                     Name = user.Name,
@@ -89,21 +89,14 @@ namespace UserServer.Controllers
         [HttpPut("{id}")]
         public ActionResult<UserDto> UpdateUser(string id, [FromBody] UpdateUserRequest request)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
-                User? user = _usersService.UpdateUser(id, request);
+                var user = _usersService.UpdateUser(id, request);
+                if (user == null) return NotFound("Not Found");
 
-                if (user == null)
-                {
-                    return NotFound("Not Found");
-                }
-
-                UserDto userDto = new()
+                var userDto = new UserDto()
                 {
                     Id = user.Id,
                     Name = user.Name,
@@ -125,9 +118,9 @@ namespace UserServer.Controllers
         [HttpDelete("{id}")]
         public IActionResult DeleteUser(string id)
         {
-            bool success = _usersService.DeleteUser(id);
+            bool isSuccess = _usersService.DeleteUser(id);
 
-            return success ? NoContent() : NotFound("Not Found");
+            return isSuccess ? NoContent() : NotFound("Not Found");
         }
 
         /// <summary>
@@ -143,13 +136,12 @@ namespace UserServer.Controllers
             _page = _page <= 0 ? 1 : _page;
 
             // Fetching the users list without email filtering
-            List<UserDto>? users = _usersService.GetUsers(_page, _per_page, _sort).Data;
+            var users = _usersService.GetUsers(_page, _per_page, _sort).Data;
+            var fileName = $"felhasznalok-{DateTime.UtcNow.ToString("yyyy-MM-ddTHH-mm-ss", CultureInfo.InvariantCulture)}.xlsx";
 
-            string? fileName = $"felhasznalok-{DateTime.UtcNow.ToString("yyyy-MM-ddTHH-mm-ss", CultureInfo.InvariantCulture)}.xlsx";
+            using var package = new ExcelPackage();
 
-            using ExcelPackage? package = new();
-
-            ExcelWorksheet? worksheet = package.Workbook.Worksheets.Add("Felhasználók");
+            var worksheet = package.Workbook.Worksheets.Add("Felhasználók");
 
             // Adding Header
             worksheet.Cells[1, 1].Value = "Név";
@@ -157,14 +149,14 @@ namespace UserServer.Controllers
             worksheet.Cells[1, 3].Value = "Kor";
 
             // Making header bold
-            using (ExcelRange? range = worksheet.Cells[1, 1, 1, 3])
+            using (var range = worksheet.Cells[1, 1, 1, 3])
             {
                 range.Style.Font.Bold = true;
             }
 
             // Adding user data
             int row = 2;
-            foreach (UserDto? user in users)
+            foreach (var user in users)
             {
                 worksheet.Cells[row, 1].Value = user.Name;
                 worksheet.Cells[row, 2].Value = user.Email;

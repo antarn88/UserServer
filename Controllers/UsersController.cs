@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
 using System.Globalization;
 using UserServer.DTOs;
@@ -10,7 +9,7 @@ namespace UserServer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    // [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly UsersService _usersService;
@@ -21,9 +20,18 @@ namespace UserServer.Controllers
         }
 
         /// <summary>
-        /// Get paginated and sorted list of users or get a user by email.
+        /// Get a paginated and sorted list of users, or retrieve a user by email.
         /// </summary>
+        /// <param name="_page">Page number for pagination, defaults to 1.</param>
+        /// <param name="_per_page">Number of items per page, defaults to 10.</param>
+        /// <param name="_sort">Sort order, defaults to "name".</param>
+        /// <param name="email">Optional email to search for a specific user.</param>
+        /// <returns>
+        /// Returns a paginated list of users, or a single user if email is provided.
+        /// </returns>
         [HttpGet]
+        [ProducesResponseType(200, Type = typeof(PagedResult<UserDto>))]
+        [ProducesResponseType(404, Type = typeof(string))]
         public ActionResult<PagedResult<UserDto>> GetUsers(
             [FromQuery] int _page = 1,
             [FromQuery] int _per_page = 10,
@@ -44,6 +52,8 @@ namespace UserServer.Controllers
 
             return Ok(users);
         }
+
+        //TODO: Get User By Email saját különálló hívásban!
 
         /// <summary>
         /// Get a user by ID.

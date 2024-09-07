@@ -62,7 +62,8 @@ namespace UserServer.Services
         {
             if (Guid.TryParse(id, out Guid guidId))
             {
-                var user = _context.Users.FirstOrDefault(u => u.Id == guidId);
+                //var user = _context.Users.FirstOrDefault(u => u.Id == guidId);
+                var user = _context.Users.Find(guidId);
                 if (user == null) return null;
 
                 return new UserDto

@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using UserServer.Data;
+using UserServer.Repositories;
 using UserServer.Services;
 
 namespace UserServer
@@ -22,6 +23,9 @@ namespace UserServer
             // Add services to the container.
             builder.Services.AddControllers();
 
+            // Add AutoMapper
+            builder.Services.AddAutoMapper(typeof(Program));
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -30,8 +34,8 @@ namespace UserServer
             builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Service-ek hozzáadása a projekthez
-            builder.Services.AddScoped<UsersService>();
             builder.Services.AddScoped<AuthService>();
+            builder.Services.AddScoped<UserRepository>();
 
             // CORS konfigurálása
             builder.Services.AddCors(options =>

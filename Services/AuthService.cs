@@ -1,4 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using AutoMapper;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,16 +13,19 @@ namespace UserServer.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IMapper _mapper;
 
-        public AuthService(ApplicationDbContext context, IConfiguration configuration)
+        public AuthService(ApplicationDbContext context, IConfiguration configuration, IMapper mapper)
         {
             _context = context;
             _configuration = configuration;
+            _mapper = mapper;
         }
 
         public AuthResponse Login(string email, string password)
         {
             var user = _context.Users.SingleOrDefault(u => u.Email == email);
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password)) throw new UnauthorizedAccessException("Invalid email or password.");
 
             var token = GenerateJwtToken(user);
@@ -29,13 +33,7 @@ namespace UserServer.Services
             return new AuthResponse
             {
                 AccessToken = token,
-                LoggedInUser = new UserDto
-                {
-                    Id = user.Id,
-                    Name = user.Name,
-                    Email = user.Email,
-                    Age = user.Age
-                }
+                LoggedInUser = _mapper.Map<UserDto>(user),
             };
         }
 

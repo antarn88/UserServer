@@ -6,9 +6,9 @@ namespace UserServer.DTOs
     {
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Invalid email address.")]
-        public string Email { get; set; } = "";
+        public string Email { get; set; } = String.Empty;
 
         [Required(ErrorMessage = "Password is required.")]
-        public string Password { get; set; } = "";
+        public string Password { get; set; } = String.Empty;
     }
 }

@@ -3,30 +3,32 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using UserServer.Data;
 using UserServer.DTOs;
+using UserServer.Interfaces;
 using UserServer.Models;
+using UserServer.Repositories;
 
 namespace UserServer.Services
 {
-    public class AuthService
+    public class AuthService : IAuthService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly UserRepository _userRepository;
         private readonly IConfiguration _configuration;
         private readonly IMapper _mapper;
 
-        public AuthService(ApplicationDbContext context, IConfiguration configuration, IMapper mapper)
+        public AuthService(UserRepository userRepository, IConfiguration configuration, IMapper mapper)
         {
-            _context = context;
+            _userRepository = userRepository;
             _configuration = configuration;
             _mapper = mapper;
         }
 
-        public AuthResponse Login(string email, string password)
+        public async Task<AuthResponse> Login(string email, string password)
         {
-            var user = _context.Users.SingleOrDefault(u => u.Email == email);
+            var user = await _userRepository.GetUserByEmail(email);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password)) throw new UnauthorizedAccessException("Invalid email or password.");
+            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))
+                throw new UnauthorizedAccessException("Invalid email or password.");
 
             var token = GenerateJwtToken(user);
 
@@ -37,16 +39,14 @@ namespace UserServer.Services
             };
         }
 
-        private string GenerateJwtToken(User user)
+        public string GenerateJwtToken(User user)
         {
             var jwtKey = _configuration["Jwt:Key"];
             var jwtIssuer = _configuration["Jwt:Issuer"];
             var jwtAudience = _configuration["Jwt:Audience"];
 
             if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience))
-            {
                 throw new InvalidOperationException("JWT configuration is missing.");
-            }
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);

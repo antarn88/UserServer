@@ -58,20 +58,32 @@ namespace UserServer.Repositories
             }
         }
 
-        public async Task<UserDto?> GetUserById(Guid id)
+        public async Task<UserDto?> GetUserDtoById(Guid id)
         {
             var user = await _context.Users.FindAsync(id);
 
             return user == null ? null : _mapper.Map<UserDto>(user);
         }
 
-        public async Task<UserDto?> GetUserByEmail(string email)
+        public async Task<UserDto?> GetUserDtoByEmail(string email)
         {
             try
             {
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
                 return user == null ? null : _mapper.Map<UserDto>(user);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error getting user by email", ex);
+            }
+        }
+
+        public async Task<User?> GetUserByEmail(string email)
+        {
+            try
+            {
+                return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             }
             catch (Exception ex)
             {

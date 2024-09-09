@@ -7,6 +7,6 @@ namespace UserServer.Data
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-        public DbSet<User> Users { get; set; } // A User modell DbSet-je
+        public DbSet<User> Users { get; set; }
     }
 }

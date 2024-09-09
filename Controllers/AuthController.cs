@@ -16,19 +16,29 @@ namespace UserServer.Controllers
         }
 
         [HttpPost("login")]
-        public ActionResult<AuthResponse> Login([FromBody] LoginRequest loginRequest)
+        [ProducesResponseType(200, Type = typeof(AuthResponse))]
+        [ProducesResponseType(400, Type = typeof(string))]
+        [ProducesResponseType(401, Type = typeof(string))]
+        [ProducesResponseType(500, Type = typeof(string))]
+        public async Task<ActionResult<AuthResponse>> Login(
+           [FromBody] LoginRequest loginRequest)
         {
-            if (loginRequest == null || !ModelState.IsValid) return BadRequest("Invalid request.");
-
             try
             {
-                var response = _authService.Login(loginRequest.Email, loginRequest.Password);
+                if (loginRequest == null || !ModelState.IsValid)
+                    return BadRequest("Invalid request.");
+
+                var response = await _authService.Login(loginRequest.Email, loginRequest.Password);
 
                 return Ok(response);
             }
             catch (UnauthorizedAccessException)
             {
                 return Unauthorized("Invalid email or password.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An unexpected error occurred: " + ex.Message);
             }
         }
     }

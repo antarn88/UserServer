@@ -35,6 +35,7 @@ namespace UserServer
 
             // Service-ek hozzáadása a projekthez
             builder.Services.AddScoped<AuthService>();
+            builder.Services.AddScoped<UserService>();
             builder.Services.AddScoped<UserRepository>();
 
             // CORS konfigurálása
